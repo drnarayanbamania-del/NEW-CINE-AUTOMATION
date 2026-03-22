@@ -1,0 +1,5 @@
+{
+  "name": "Cinematic Video Studio",
+  "description": "Generate high-quality cinematic videos using Google's Veo AI model.",
+  "requestFramePermissions": []
+}
