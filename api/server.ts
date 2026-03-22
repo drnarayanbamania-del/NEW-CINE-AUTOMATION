@@ -304,6 +304,14 @@ app.post("/api/generate-production-assets", async (req, res) => {
   }
 });
 
+// 404 Handler for undefined API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "API route not found" });
+  }
+  next();
+});
+
 // Production/Deployment setup
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.VERCEL;
 
