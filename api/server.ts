@@ -1,10 +1,12 @@
 import express from "express";
+import cors from "cors";
 import RunwayML from "@runwayml/sdk";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
+app.use(cors()); // Allow all origins for now to ensure smooth deployment
 app.use(express.json());
 
 // ==========================================

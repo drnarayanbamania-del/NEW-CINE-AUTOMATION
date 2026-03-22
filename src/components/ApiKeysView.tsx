@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Key, Save, Shield, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
+const API_BASE_URL = "https://new-cine-automation.onrender.com";
+
 export default function ApiKeysView() {
   const [keys, setKeys] = useState({
     openai: "",
@@ -65,7 +67,7 @@ export default function ApiKeysView() {
     setResults(prev => ({ ...prev, [provider]: null }));
     
     try {
-      const response = await fetch("/api/verify-key", {
+      const response = await fetch(`${API_BASE_URL}/api/verify-key`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, key })

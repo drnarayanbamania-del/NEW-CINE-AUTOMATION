@@ -33,6 +33,9 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// API Base URL for backend calls
+const API_BASE_URL = "https://new-cine-automation.onrender.com";
+
 // Utility to get stored API keys
 const getStoredKeys = () => {
   const saved = localStorage.getItem("ai_studio_api_keys");
@@ -177,7 +180,7 @@ export default function App() {
     setIsEnhancing(true);
     try {
       const keys = getStoredKeys();
-      const response = await fetch("/api/enhance-prompt", {
+      const response = await fetch(`${API_BASE_URL}/api/enhance-prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, type: activeTab === "image" ? "image" : "video", apiKey: keys.openai })
@@ -200,7 +203,7 @@ export default function App() {
     setError(null);
     try {
       const keys = getStoredKeys();
-      const response = await fetch("/api/generate-image", {
+      const response = await fetch(`${API_BASE_URL}/api/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -226,7 +229,7 @@ export default function App() {
     setError(null);
     try {
       const keys = getStoredKeys();
-      const response = await fetch("/api/generate-caption", {
+      const response = await fetch(`${API_BASE_URL}/api/generate-caption`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: captionPrompt, apiKey: keys.openai })
@@ -254,7 +257,7 @@ export default function App() {
       setStatusMessage("Generating Script and Creative Assets...");
       addLog("Step 1: Generating script, captions, and visual prompts...", 'info');
       const keys = getStoredKeys();
-      const assetsRes = await fetch("/api/generate-production-assets", {
+      const assetsRes = await fetch(`${API_BASE_URL}/api/generate-production-assets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, apiKey: keys.openai })
@@ -299,7 +302,7 @@ export default function App() {
         (async () => {
           try {
             addLog("Triggering Sarvam AI voiceover generation...", 'info');
-            const ttsRes = await fetch("/api/generate-tts", {
+            const ttsRes = await fetch(`${API_BASE_URL}/api/generate-tts`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ text: assets.script, language: ttsLanguage, speaker: ttsSpeaker, apiKey: keys.sarvam })
@@ -320,7 +323,7 @@ export default function App() {
         (async () => {
           try {
             addLog(`Triggering ${selectedImageProvider} thumbnail generation...`, 'info');
-            const thumbRes = await fetch("/api/generate-image", {
+            const thumbRes = await fetch(`${API_BASE_URL}/api/generate-image`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ 
@@ -409,7 +412,7 @@ export default function App() {
       const finalPrompt = promptParts.join(", ");
       
       const keys = getStoredKeys();
-      const initRes = await fetch("/api/generate-runway", {
+      const initRes = await fetch(`${API_BASE_URL}/api/generate-runway`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, videoQuality, bitrate, apiKey: keys.runway })
@@ -443,7 +446,7 @@ export default function App() {
         // Update status message based on progress or time
         setStatusMessage("Applying cinematic filters...");
         
-        const pollRes = await fetch(`/api/runway-task/${taskId}`);
+        const pollRes = await fetch(`${API_BASE_URL}/api/runway-task/${taskId}`);
         const pollContentType = pollRes.headers.get("content-type");
         let pollData;
         
@@ -498,7 +501,7 @@ export default function App() {
       const finalPrompt = promptParts.join(", ");
       
       const keys = getStoredKeys();
-      const initRes = await fetch("/api/generate-elevenlabs", {
+      const initRes = await fetch(`${API_BASE_URL}/api/generate-elevenlabs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, videoQuality, bitrate, apiKey: keys.elevenlabs })
@@ -518,7 +521,7 @@ export default function App() {
       while (!isDone) {
         await new Promise(resolve => setTimeout(resolve, 10000));
         
-        const pollRes = await fetch(`/api/elevenlabs-task/${taskId}`);
+        const pollRes = await fetch(`${API_BASE_URL}/api/elevenlabs-task/${taskId}`);
         const pollData = await pollRes.json();
         
         if (pollData.status === "SUCCEEDED") {
@@ -553,7 +556,7 @@ export default function App() {
       const finalPrompt = promptParts.join(", ");
       
       const keys = getStoredKeys();
-      const initRes = await fetch("/api/generate-openai-video", {
+      const initRes = await fetch(`${API_BASE_URL}/api/generate-openai-video`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, apiKey: keys.openai })
@@ -573,7 +576,7 @@ export default function App() {
       while (!isDone) {
         await new Promise(resolve => setTimeout(resolve, 10000));
         
-        const pollRes = await fetch(`/api/openai-video-task/${taskId}`);
+        const pollRes = await fetch(`${API_BASE_URL}/api/openai-video-task/${taskId}`);
         const pollData = await pollRes.json();
         
         if (pollData.status === "SUCCEEDED") {
@@ -598,7 +601,7 @@ export default function App() {
 
   const handleSaveScene = async () => {
     try {
-      const response = await fetch("/api/content", {
+      const response = await fetch(`${API_BASE_URL}/api/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -631,7 +634,7 @@ export default function App() {
 
     try {
       const keys = getStoredKeys();
-      const response = await fetch("/api/generate-image", {
+      const response = await fetch(`${API_BASE_URL}/api/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -671,7 +674,7 @@ export default function App() {
 
     try {
       const keys = getStoredKeys();
-      const response = await fetch("/api/generate-tts", {
+      const response = await fetch(`${API_BASE_URL}/api/generate-tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
