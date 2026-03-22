@@ -7,6 +7,7 @@ export default function ApiKeysView() {
     runway: "",
     sarvam: "",
     elevenlabs: "",
+    pollinations: "",
   });
 
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
@@ -48,6 +49,18 @@ export default function ApiKeysView() {
   const handleVerify = async (provider: string, key: string) => {
     if (!key) return;
     
+    // Check for bullet characters (•) which users sometimes accidentally paste
+    if (key.includes("•") || key.includes("\u2022")) {
+      setResults(prev => ({ 
+        ...prev, 
+        [provider]: { 
+          valid: false, 
+          message: "You are trying to verify the masking dots (•). Please delete them and paste your actual alphanumeric API key characters instead." 
+        } 
+      }));
+      return;
+    }
+    
     setVerifying(prev => ({ ...prev, [provider]: true }));
     setResults(prev => ({ ...prev, [provider]: null }));
     
@@ -72,6 +85,7 @@ export default function ApiKeysView() {
     { id: "runway", label: "Runway ML API Secret", description: "Used for high-fidelity Video Gen" },
     { id: "sarvam", label: "Sarvam AI API Key", description: "Used for multi-lingual Voice Gen" },
     { id: "elevenlabs", label: "ElevenLabs API Key", description: "Used for Video & Voice Gen" },
+    { id: "pollinations", label: "Pollinations.ai Key (Optional)", description: "Used for Image Generation" },
   ];
 
   return (

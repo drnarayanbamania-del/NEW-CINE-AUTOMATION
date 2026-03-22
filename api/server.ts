@@ -157,6 +157,76 @@ app.post("/api/settings/youtube", (req, res) => {
   res.json({ success: true });
 });
 
+// API Key Verification Endpoint
+app.post("/api/verify-key", async (req, res) => {
+  console.log("Verify Key request received:", req.body);
+  try {
+    const { provider, key } = req.body;
+    if (!key) return res.status(400).json({ valid: false, message: "API Key is required." });
+
+    if (provider === "openai") {
+      try {
+        const { OpenAI } = await import("openai");
+        const openai = new OpenAI({ apiKey: key });
+        await openai.models.list(); // Simple call to verify key
+        return res.json({ valid: true, message: "OpenAI API Key is valid!" });
+      } catch (err: any) {
+        return res.status(401).json({ valid: false, message: `Invalid OpenAI Key: ${err.message}` });
+      }
+    }
+
+    if (provider === "runway") {
+      // Mocking Runway verification as the SDK doesn't have a simple 'ping'
+      // and 'list' doesn't exist. We'll assume it's valid if they reached this point.
+      if (key.length > 10) return res.json({ valid: true, message: "Runway ML API Key format accepted!" });
+      return res.status(401).json({ valid: false, message: "Invalid Runway ML Key format." });
+    }
+
+    if (provider === "elevenlabs") {
+      try {
+        const response = await fetch("https://api.elevenlabs.io/v1/voices?limit=1", {
+          headers: { "xi-api-key": key }
+        });
+        if (response.ok) return res.json({ valid: true, message: "ElevenLabs API Key is valid!" });
+        const error = await response.json();
+        // If it's missing permissions for voices but still returns a structured error, 
+        // it means the key is likely authenticated.
+        const msg = error.detail?.status || error.detail?.message || "Invalid ElevenLabs Key.";
+        return res.status(401).json({ valid: false, message: msg });
+      } catch (err: any) {
+        console.error("ElevenLabs Verification Error:", err);
+        return res.status(500).json({ valid: false, message: `ElevenLabs Error: ${err.message || err}` });
+      }
+    }
+
+    if (provider === "sarvam") {
+      try {
+        const response = await fetch("https://api.sarvam.ai/text-to-speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-subscription-key": key },
+          body: JSON.stringify({ inputs: ["Ping"], target_language_code: "hi-IN", speaker: "meera", model: "bulbul:v1" })
+        });
+        // We'll consider 400 (if payload is wrong) or 200 as valid key if we get something back
+        if (response.status === 200 || response.status === 400) return res.json({ valid: true, message: "Sarvam AI API Key is valid!" });
+        return res.status(401).json({ valid: false, message: "Invalid Sarvam AI Key." });
+      } catch (err: any) {
+        console.error("Sarvam AI Verification Error:", err);
+        return res.status(500).json({ valid: false, message: `Sarvam AI Error: ${err.message || err}` });
+      }
+    }
+
+    if (provider === "pollinations") {
+      // Pollinations.ai key is optional and keyless usage is common.
+      // If a key is provided, we'll assume it's for premium features and "valid" for now.
+      return res.json({ valid: true, message: "Pollinations.ai configuration accepted!" });
+    }
+
+    res.status(400).json({ valid: false, message: "Unknown provider." });
+  } catch (error: any) {
+    res.status(500).json({ valid: false, message: "Server error during verification." });
+  }
+});
+
 // Content Library Endpoint
 app.get("/api/content", (req, res) => res.json(contentLibrary));
 
@@ -175,16 +245,28 @@ app.get("/api/scraper/logs", (req, res) => {
 
 // Image Generation Endpoint
 app.post("/api/generate-image", async (req, res) => {
+  const { prompt: imagePrompt, provider = "openai", apiKey: clientKey, pollinationsKey: clientPollinationsKey } = req.body;
+  const pollinationsKey = clientPollinationsKey || process.env.POLLINATIONS_API_KEY;
   try {
-    const { prompt, apiKey: clientKey } = req.body;
+    if (provider === "pollinations") {
+      const encodedPrompt = encodeURIComponent(imagePrompt);
+      const seed = Math.floor(Math.random() * 1000000);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1024&height=1024&nologo=true&enhance=true`;
+      return res.json({ imageUrl });
+    }
+
     const apiKey = clientKey || process.env.OPENAI_API_KEY;
     const { OpenAI } = await import("openai");
     const openai = new OpenAI({ apiKey });
-    const response = await openai.images.generate({ model: "dall-e-3", prompt, n: 1, size: "1024x1024" });
+    const response = await openai.images.generate({ model: "dall-e-3", prompt: imagePrompt, n: 1, size: "1024x1024" });
     res.json({ imageUrl: response.data[0].url });
   } catch (error: any) {
     if (error.status === 429 || error.message?.includes("quota")) {
-      return res.json({ imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1080", isMocked: true });
+      // Fallback to Pollinations instead of Unsplash for better results
+      const encodedPrompt = encodeURIComponent(imagePrompt || "cinematic scene");
+      const seed = Math.floor(Math.random() * 1000000);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1024&height=1024&nologo=true&enhance=true`;
+      return res.json({ imageUrl, isMocked: true, provider: "pollinations-fallback" });
     }
     res.status(500).json({ error: String(error.message || error) });
   }
@@ -215,8 +297,31 @@ app.post("/api/generate-production-assets", async (req, res) => {
   }
 });
 
-// Local development server (vite proxy)
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV === undefined) {
+// Production/Deployment setup
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.VERCEL;
+
+if (isProduction) {
+  // Use dynamic imports to avoid loading production dependencies in dev
+  const path = await import("path");
+  const { fileURLToPath } = await import("url");
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distPath = path.join(__dirname, "../dist");
+  
+  app.use(express.static(distPath));
+  
+  // All other routes should serve index.html for SPA routing
+  app.get("*", (req, res) => {
+    if (req.path.startsWith("/api")) return res.status(404).json({ error: "API route not found" });
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+
+  // Only start a separate listener if NOT on Vercel (Vercel handles routing itself)
+  if (!process.env.VERCEL) {
+    const PORT = Number(process.env.PORT) || 10000;
+    app.listen(PORT, "0.0.0.0", () => console.log(`Production server running on port ${PORT}`));
+  }
+} else {
+  // Local development server (vite proxy)
   const { createServer: createViteServer } = await import("vite");
   const vite = await createViteServer({
     server: { middlewareMode: true },

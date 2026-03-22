@@ -50,6 +50,7 @@ export default function App() {
   const [hasKey, setHasKey] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"video" | "audio" | "image" | "thumbnail" | "caption">("video");
   const [selectedProvider, setSelectedProvider] = useState<"runway" | "elevenlabs" | "openai">("runway");
+  const [selectedImageProvider, setSelectedImageProvider] = useState<"openai" | "pollinations">("pollinations");
   const [prompt, setPrompt] = useState("");
   const [thumbnailPrompt, setThumbnailPrompt] = useState("");
   const [captionPrompt, setCaptionPrompt] = useState("");
@@ -202,7 +203,12 @@ export default function App() {
       const response = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: `High-quality YouTube thumbnail: ${thumbnailPrompt}`, apiKey: keys.openai })
+        body: JSON.stringify({ 
+          prompt: `High-quality YouTube thumbnail: ${thumbnailPrompt}`, 
+          provider: selectedImageProvider,
+          apiKey: keys.openai,
+          pollinationsKey: keys.pollinations
+        })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to generate thumbnail");
@@ -313,11 +319,16 @@ export default function App() {
         // Thumbnail Generation
         (async () => {
           try {
-            addLog("Triggering thumbnail generation...", 'info');
+            addLog(`Triggering ${selectedImageProvider} thumbnail generation...`, 'info');
             const thumbRes = await fetch("/api/generate-image", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ prompt: `High-quality YouTube thumbnail: ${assets.thumbnailPrompt}`, apiKey: keys.openai })
+              body: JSON.stringify({ 
+                prompt: `High-quality YouTube thumbnail: ${assets.thumbnailPrompt}`, 
+                provider: selectedImageProvider,
+                apiKey: keys.openai,
+                pollinationsKey: keys.pollinations
+              })
             });
             const thumbData = await thumbRes.json();
             if (thumbRes.ok) {
@@ -623,7 +634,12 @@ export default function App() {
       const response = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, apiKey: keys.openai })
+        body: JSON.stringify({ 
+          prompt, 
+          provider: selectedImageProvider,
+          apiKey: keys.openai,
+          pollinationsKey: keys.pollinations
+        })
       });
 
       if (!response.ok) throw new Error("Failed to generate image.");
@@ -1340,6 +1356,31 @@ export default function App() {
             ) : activeTab === "image" ? (
               <div className="space-y-5">
                 <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Image Provider</label>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button
+                      onClick={() => setSelectedImageProvider("openai")}
+                      className={`py-2 px-3 rounded-xl text-xs font-medium transition-all border ${
+                        selectedImageProvider === "openai" 
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                          : "bg-black/30 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                      }`}
+                      disabled={isGenerating || isProductionGenerating}
+                    >
+                      DALL-E 3
+                    </button>
+                    <button
+                      onClick={() => setSelectedImageProvider("pollinations")}
+                      className={`py-2 px-3 rounded-xl text-xs font-medium transition-all border ${
+                        selectedImageProvider === "pollinations" 
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                          : "bg-black/30 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                      }`}
+                      disabled={isGenerating || isProductionGenerating}
+                    >
+                      Pollinations.ai
+                    </button>
+                  </div>
                   <label className="block text-sm font-medium text-zinc-400 mb-2">Image Prompt</label>
                   <textarea
                     value={prompt}
@@ -1379,6 +1420,31 @@ export default function App() {
             ) : activeTab === "thumbnail" ? (
               <div className="space-y-5">
                 <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Thumbnail Provider</label>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button
+                      onClick={() => setSelectedImageProvider("openai")}
+                      className={`py-2 px-3 rounded-xl text-xs font-medium transition-all border ${
+                        selectedImageProvider === "openai" 
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                          : "bg-black/30 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                      }`}
+                      disabled={isGeneratingThumbnail || isProductionGenerating}
+                    >
+                      DALL-E 3
+                    </button>
+                    <button
+                      onClick={() => setSelectedImageProvider("pollinations")}
+                      className={`py-2 px-3 rounded-xl text-xs font-medium transition-all border ${
+                        selectedImageProvider === "pollinations" 
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                          : "bg-black/30 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                      }`}
+                      disabled={isGeneratingThumbnail || isProductionGenerating}
+                    >
+                      Pollinations.ai
+                    </button>
+                  </div>
                   <label className="block text-sm font-medium text-zinc-400 mb-2">Thumbnail Concept</label>
                   <textarea
                     value={thumbnailPrompt}
