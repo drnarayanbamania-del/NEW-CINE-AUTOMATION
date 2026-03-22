@@ -9,6 +9,11 @@ const app = express();
 app.use(cors()); // Allow all origins for now to ensure smooth deployment
 app.use(express.json());
 
+// Basic Health Check Route
+app.get("/api", (req, res) => {
+  res.json({ message: "Backend working" });
+});
+
 // ==========================================
 // API ROUTES
 // ==========================================
