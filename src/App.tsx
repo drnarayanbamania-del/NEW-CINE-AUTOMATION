@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Film, Play, Loader2, Key, Settings2, Download, Sparkles, AlertCircle, Mic, Volume2, Music, LayoutDashboard, Workflow, Library, BarChart3, Menu, X, Save, Globe, Activity, Image, Type, Zap, Youtube } from "lucide-react";
+import DirectorToolkit from "./components/DirectorToolkit";
+import { Film, Play, Loader2, Key, Settings2, Download, Sparkles, AlertCircle, Mic, Volume2, Music, LayoutDashboard, Workflow, Library, BarChart3, Menu, X, Save, Globe, Activity, Image, Type, Zap, Youtube, Wand2, Info } from "lucide-react";
 import LibraryView from "./components/LibraryView";
 import WorkflowsView from "./components/WorkflowsView";
 import AnalyticsView from "./components/AnalyticsView";
@@ -59,6 +60,14 @@ export default function App() {
   const [resolution, setResolution] = useState<"1080p" | "720p">("1080p");
   const [videoQuality, setVideoQuality] = useState<"Standard" | "HD" | "4K">("HD");
   const [bitrate, setBitrate] = useState("10 Mbps");
+  
+  const STYLE_PRESETS = [
+    { name: "Cinematic Noir", prompt: "film noir style, high contrast, dramatic shadows, moody lighting, 35mm film grain" },
+    { name: "Cyberpunk Edge", prompt: "cyberpunk aesthetic, neon bioluminescence, rainy streets, high-tech interiors" },
+    { name: "Dreamy Ethereal", prompt: "soft focus, pastel tones, ethereal lighting, dream-like atmosphere, slow motion" },
+    { name: "8K Hyperreal", prompt: "8k ultra-resolution, hyper-realistic textures, macro photography, sharp focus" },
+    { name: "Studio Minimalist", prompt: "clean minimalist studio lighting, high-key, professional commercial style" }
+  ];
   
   // Video Editing States
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -887,10 +896,31 @@ export default function App() {
               </div>
             </div>
             
-            {activeTab === "video" ? (
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">AI Provider</label>
+            {            activeTab === "video" ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                {/* Main Content Area */}
+                <div className="lg:col-span-8 space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                          <Film className="w-5 h-5 text-emerald-500" />
+                          Scene Studio
+                        </h2>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">AI Video Generation Pipeline</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setPrompt("An astronaut exploring an alien world with purple flora and crystal mountains.")}
+                          className="px-3 py-1.5 border border-zinc-800 hover:border-zinc-700 bg-zinc-900/50 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-all uppercase tracking-widest"
+                        >
+                          Surprise Me
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">AI Provider</label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => setSelectedProvider("runway")}
@@ -954,8 +984,24 @@ export default function App() {
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="A futuristic cityscape at sunset with flying cars and neon signs"
                     className="w-full h-32 bg-black/50 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 resize-none transition-all"
-                    disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                    disabled={isGenerating || isProductionGenerating}
                   />
+
+                  {/* Style Presets Chips */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {STYLE_PRESETS.map((style) => (
+                      <button
+                        key={style.name}
+                        onClick={() => {
+                          setPrompt(prev => prev ? `${prev}, ${style.prompt}` : style.prompt);
+                          addLog(`Applied Style Preset: ${style.name}`, 'info');
+                        }}
+                        className="px-2.5 py-1 bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-zinc-500 hover:text-emerald-400 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
+                      >
+                        {style.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -965,7 +1011,7 @@ export default function App() {
                       value={cameraAngle}
                       onChange={(e) => setCameraAngle(e.target.value)}
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 appearance-none"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     >
                       <option value="">Any</option>
                       <option value="Eye-level">Eye-level</option>
@@ -981,7 +1027,7 @@ export default function App() {
                       value={shotType}
                       onChange={(e) => setShotType(e.target.value)}
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 appearance-none"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     >
                       <option value="">Any</option>
                       <option value="Wide Shot">Wide Shot</option>
@@ -1001,7 +1047,7 @@ export default function App() {
                     onChange={(e) => setMood(e.target.value)}
                     placeholder="e.g. Cinematic, Cyberpunk, Melancholic, Vibrant..."
                     className="w-full bg-black/50 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
-                    disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                    disabled={isGenerating || isProductionGenerating}
                   />
                 </div>
 
@@ -1012,7 +1058,7 @@ export default function App() {
                       value={videoQuality}
                       onChange={(e) => setVideoQuality(e.target.value as "Standard" | "HD" | "4K")}
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 appearance-none"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     >
                       <option value="Standard">Standard</option>
                       <option value="HD">HD</option>
@@ -1025,7 +1071,7 @@ export default function App() {
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value as "1080p" | "720p")}
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 appearance-none"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     >
                       <option value="720p">720p</option>
                       <option value="1080p">1080p</option>
@@ -1039,7 +1085,7 @@ export default function App() {
                       onChange={(e) => setBitrate(e.target.value)}
                       placeholder="e.g. 10 Mbps"
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-all"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     />
                   </div>
                 </div>
@@ -1076,7 +1122,7 @@ export default function App() {
                         }
                       }}
                       className="w-full bg-black/50 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 appearance-none"
-                      disabled={isGenerating || isGeneratingTTS || isProductionGenerating}
+                      disabled={isGenerating || isProductionGenerating}
                     >
                       <option value="Standard">Standard (720p, 5 Mbps)</option>
                       <option value="HD">HD (1080p, 10 Mbps)</option>
@@ -1277,6 +1323,20 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+                <div className="lg:col-span-4 bg-zinc-900/40 border border-zinc-800/60 rounded-[2.5rem] p-8 h-fit sticky top-6 backdrop-blur-xl shadow-2xl shadow-black/50">
+                  <DirectorToolkit 
+                    onApplyStyle={(s) => {
+                      setPrompt(prev => prev ? `${prev}, ${s}` : s);
+                      addLog(`Director Applied Style: ${s.split(',')[0]}`, 'info');
+                    }}
+                    onApplyRatio={(r) => {
+                      setAspectRatio(r);
+                      addLog(`Director Set Aspect Ratio: ${r}`, 'info');
+                    }} 
+                  />
+                </div>
+              </div>
             ) : activeTab === "image" ? (
               <div className="space-y-5">
                 <div>
@@ -1385,7 +1445,7 @@ export default function App() {
                     onChange={(e) => setTtsPrompt(e.target.value)}
                     placeholder="Enter the script for your voiceover..."
                     className="w-full h-32 bg-black/50 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 resize-none transition-all"
-                    disabled={isGeneratingTTS || isGenerating}
+                    disabled={isGenerating || isProductionGenerating}
                   />
                 </div>
 
