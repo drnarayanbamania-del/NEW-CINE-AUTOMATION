@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Basic Health Check Route
 app.get("/api", (req, res) => {
-  res.json({ message: "Backend working" });
+  res.json({ message: "API is working 🚀" });
 });
 
 // ==========================================
