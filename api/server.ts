@@ -46,12 +46,11 @@ app.post("/api/generate-runway", async (req, res) => {
         ratio: gen3aRatio,
       });
     } else {
-      const gen45Ratio: '1280:720' | '720:1280' = aspectRatio === '9:16' ? '720:1280' : '1280:720';
+      const fastRatio: '1280:720' | '720:1280' = aspectRatio === '9:16' ? '720:1280' : '1280:720';
       task = await client.textToVideo.create({
-        model: 'gen4.5',
+        model: 'veo3.1_fast',
         promptText: prompt,
-        ratio: gen45Ratio,
-        duration: 4,
+        ratio: fastRatio,
       });
     }
 
