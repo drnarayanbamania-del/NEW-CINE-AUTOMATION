@@ -372,11 +372,11 @@ export default function App() {
     try {
       if (selectedProvider === "runway") {
         try {
-          await handleGenerateRunway();
+          await handleGenerateRunway(undefined, videoUrl || undefined);
         } catch (runwayErr) {
           console.error("Runway failed, falling back to OpenAI:", runwayErr);
           setStatusMessage("Runway ML failed. Attempting fallback to OpenAI Sora...");
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 500));
           await handleGenerateOpenAI();
         }
       } else if (selectedProvider === "elevenlabs") {
@@ -385,7 +385,7 @@ export default function App() {
         } catch (elevenLabsErr) {
           console.error("ElevenLabs failed, falling back to OpenAI:", elevenLabsErr);
           setStatusMessage("ElevenLabs failed. Attempting fallback to OpenAI Sora...");
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 500));
           await handleGenerateOpenAI();
         }
       } else if (selectedProvider === "openai") {
@@ -399,9 +399,9 @@ export default function App() {
     }
   };
 
-  const handleGenerateRunway = async (customPrompt?: string) => {
+  const handleGenerateRunway = async (customPrompt?: string, imagePrompt?: string) => {
     try {
-      setStatusMessage("Submitting generation request to Runway ML...");
+      setStatusMessage(imagePrompt ? "Initializing Image-to-Video Turbo..." : "Submitting generation request to Runway ML...");
       
       const promptParts = [customPrompt || prompt.trim()];
       if (cameraAngle) promptParts.push(`Camera Angle: ${cameraAngle}`);
@@ -415,7 +415,15 @@ export default function App() {
       const initRes = await fetch(`${API_BASE_URL}/api/generate-runway`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, videoQuality, bitrate, apiKey: keys.runway })
+        body: JSON.stringify({ 
+          prompt: finalPrompt, 
+          aspectRatio, 
+          resolution, 
+          videoQuality, 
+          bitrate, 
+          apiKey: keys.runway,
+          promptImage: imagePrompt
+        })
       });
       
       const contentType = initRes.headers.get("content-type");
@@ -441,7 +449,7 @@ export default function App() {
       // Poll for completion
       let isDone = false;
       while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Update status message based on progress or time
         setStatusMessage("Applying cinematic filters...");
@@ -519,7 +527,7 @@ export default function App() {
       // Poll for completion
       let isDone = false;
       while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         const pollRes = await fetch(`${API_BASE_URL}/api/elevenlabs-task/${taskId}`);
         const pollData = await pollRes.json();
@@ -574,7 +582,7 @@ export default function App() {
       // Poll for completion
       let isDone = false;
       while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         const pollRes = await fetch(`${API_BASE_URL}/api/openai-video-task/${taskId}`);
         const pollData = await pollRes.json();
@@ -836,7 +844,12 @@ export default function App() {
 
         <div className="flex-1 overflow-y-auto">
           {currentView === "workflows" && <WorkflowsView />}
-          {currentView === "library" && <LibraryView onGenerateVideo={(p) => { setPrompt(p); setCurrentView("generators"); setActiveTab("video"); }} />}
+          {currentView === "library" && (
+            <LibraryView 
+              onGenerateVideo={(p) => { setPrompt(p); setVideoUrl(null); setCurrentView("generators"); setActiveTab("video"); }} 
+              onGenerateFromImage={(url, p) => { setPrompt(p); setVideoUrl(url); setCurrentView("generators"); setActiveTab("video"); }}
+            />
+          )}
           {currentView === "analytics" && <AnalyticsView />}
           {currentView === "scraper" && <ScraperView onGenerateFromTrend={handleFullProduction} />}
           {currentView === "apikeys" && <ApiKeysView />}

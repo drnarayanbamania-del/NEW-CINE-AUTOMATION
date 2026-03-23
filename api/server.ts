@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import RunwayML from "@runwayml/sdk";
 import dotenv from "dotenv";
+import { generateFastVideo, generateShorts } from "./fast-generation";
 
 dotenv.config();
 
@@ -38,20 +39,9 @@ app.post("/api/generate-runway", async (req, res) => {
 
     let task;
     if (promptImage) {
-      const gen3aRatio: '1280:768' | '768:1280' = aspectRatio === '9:16' ? '768:1280' : '1280:768';
-      task = await client.imageToVideo.create({
-        model: 'gen3a_turbo',
-        promptImage: promptImage,
-        promptText: prompt,
-        ratio: gen3aRatio,
-      });
+      task = await generateFastVideo({ prompt, aspectRatio, apiKey, imagePrompt: promptImage });
     } else {
-      const fastRatio: '1280:720' | '720:1280' = aspectRatio === '9:16' ? '720:1280' : '1280:720';
-      task = await client.textToVideo.create({
-        model: 'veo3.1_fast',
-        promptText: prompt,
-        ratio: fastRatio,
-      });
+      task = await generateFastVideo({ prompt, aspectRatio, apiKey });
     }
 
     res.json({ taskId: task.id });
@@ -104,6 +94,24 @@ app.post("/api/generate-elevenlabs", async (req, res) => {
       return res.json({ taskId: `mock-el-${Date.now()}`, isMocked: true, videoUrl: "https://media.elevenlabs.io/mock.mp4" });
     }
     res.status(500).json({ error: String(error.message || error) });
+  }
+});
+
+// AI Shorts Generation (Fast Generation Pipeline)
+app.post("/api/generate-shorts", async (req, res) => {
+  try {
+    const { model, autoPublish, apiKey: clientKey } = req.body;
+    const apiKey = clientKey || process.env.RUNWAYML_API_SECRET;
+    
+    if (!apiKey || apiKey === "runway-placeholder") {
+      return res.status(400).json({ error: "Runway ML API Key is required for Shorts generation." });
+    }
+
+    const result = await generateShorts({ model, autoPublish, apiKey });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error("Shorts Generation Error:", error);
+    res.status(500).json({ success: false, error: String(error.message || error) });
   }
 });
 
@@ -245,8 +253,18 @@ app.post("/api/verify-key", async (req, res) => {
   }
 });
 
-// Content Library Endpoint
+// Content Library Endpoints
 app.get("/api/content", (req, res) => res.json(contentLibrary));
+
+app.post("/api/content", (req, res) => {
+  const newItem = {
+    id: contentLibrary.length + 1,
+    date: new Date().toISOString().split('T')[0],
+    ...req.body
+  };
+  contentLibrary.unshift(newItem as any);
+  res.json(newItem);
+});
 
 // Analytics & Scraper Endpoints
 app.get("/api/analytics", (req, res) => {

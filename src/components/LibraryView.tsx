@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Search, Filter, Video, FileText, Image as ImageIcon, MoreVertical, Download, X, Play, Clock, Info, Youtube, Loader2 } from "lucide-react";
 
-export default function LibraryView({ onGenerateVideo }: { onGenerateVideo: (prompt: string) => void }) {
+export default function LibraryView({ 
+  onGenerateVideo, 
+  onGenerateFromImage 
+}: { 
+  onGenerateVideo: (prompt: string) => void,
+  onGenerateFromImage: (imageUrl: string, prompt: string) => void
+}) {
   const [content, setContent] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -248,6 +254,14 @@ export default function LibraryView({ onGenerateVideo }: { onGenerateVideo: (pro
                   <Video className="w-4 h-4" />
                   Convert to Video
                 </button>
+              ) : selectedItem.type === 'image' ? (
+                <button 
+                 onClick={() => { onGenerateFromImage(selectedItem.url || "", selectedItem.prompt); setSelectedItem(null); }}
+                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+               >
+                 <Video className="w-4 h-4" />
+                 Convert to Video (Turbo)
+               </button>
               ) : (
                 <div className="flex gap-2">
                   <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2">
