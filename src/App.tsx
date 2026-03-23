@@ -848,17 +848,19 @@ export default function App() {
             <LibraryView 
               onGenerateVideo={(p) => { setPrompt(p); setVideoUrl(null); setCurrentView("generators"); setActiveTab("video"); }} 
               onGenerateFromImage={(url, p) => { setPrompt(p); setVideoUrl(url); setCurrentView("generators"); setActiveTab("video"); }}
+              apiBaseUrl={API_BASE_URL}
             />
           )}
           {currentView === "analytics" && <AnalyticsView />}
-          {currentView === "scraper" && <ScraperView onGenerateFromTrend={handleFullProduction} />}
-          {currentView === "apikeys" && <ApiKeysView />}
+          {currentView === "scraper" && <ScraperView onGenerateFromTrend={handleFullProduction} apiBaseUrl={API_BASE_URL} />}
+          {currentView === "apikeys" && <ApiKeysView apiBaseUrl={API_BASE_URL} />}
           {currentView === "settings" && (
             <SettingsView 
               autoShortsEnabled={autoShortsEnabled} 
               setAutoShortsEnabled={setAutoShortsEnabled}
               shortsModel={shortsModel}
               setShortsModel={setShortsModel}
+              apiBaseUrl={API_BASE_URL}
             />
           )}
           

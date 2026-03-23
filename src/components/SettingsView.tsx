@@ -5,12 +5,14 @@ export default function SettingsView({
   autoShortsEnabled, 
   setAutoShortsEnabled, 
   shortsModel, 
-  setShortsModel 
+  setShortsModel,
+  apiBaseUrl
 }: { 
   autoShortsEnabled: boolean;
   setAutoShortsEnabled: (val: boolean) => void;
   shortsModel: string;
   setShortsModel: (val: string) => void;
+  apiBaseUrl: string;
 }) {
   const [youtubeApiKey, setYoutubeApiKey] = useState("");
   const [youtubeChannelId, setYoutubeChannelId] = useState("");
@@ -21,7 +23,7 @@ export default function SettingsView({
   const handleConnectYouTube = async () => {
     setIsConnecting(true);
     try {
-      const response = await fetch("/api/settings/youtube", {
+      const response = await fetch(`${apiBaseUrl}/api/settings/youtube`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: youtubeApiKey, channelId: youtubeChannelId })
@@ -173,7 +175,7 @@ export default function SettingsView({
                   <button 
                     onClick={async () => {
                       try {
-                        const response = await fetch("/api/generate-shorts", {
+                        const response = await fetch(`${apiBaseUrl}/api/generate-shorts`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ model: shortsModel, autoPublish: autoShortsEnabled })

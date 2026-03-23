@@ -3,10 +3,12 @@ import { Search, Filter, Video, FileText, Image as ImageIcon, MoreVertical, Down
 
 export default function LibraryView({ 
   onGenerateVideo, 
-  onGenerateFromImage 
+  onGenerateFromImage,
+  apiBaseUrl
 }: { 
   onGenerateVideo: (prompt: string) => void,
-  onGenerateFromImage: (imageUrl: string, prompt: string) => void
+  onGenerateFromImage: (imageUrl: string, prompt: string) => void,
+  apiBaseUrl: string
 }) {
   const [content, setContent] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
@@ -15,7 +17,7 @@ export default function LibraryView({
   const handlePublish = async (item: any) => {
     setIsPublishing(true);
     try {
-      const response = await fetch("/api/publish/youtube", {
+      const response = await fetch(`${apiBaseUrl}/api/publish/youtube`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoId: item.id, title: item.title, description: item.prompt })
@@ -42,7 +44,7 @@ export default function LibraryView({
       { id: 4, title: "Smart Watch Commercial", type: "video", status: "ready", date: "2026-03-22", prompt: "Cinematic close-up of a sleek smart watch on a wrist, glowing minimalist interface, smooth hand movement, urban bokeh background.", resolution: "1080p", provider: "OpenAI Sora", duration: "30s" }
     ];
 
-    fetch("/api/content")
+    fetch(`${apiBaseUrl}/api/content`)
       .then((res) => {
         if (!res.ok) throw new Error("API not found");
         return res.json();
