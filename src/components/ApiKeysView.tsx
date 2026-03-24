@@ -4,6 +4,7 @@ import { Key, Save, Shield, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [keys, setKeys] = useState({
     openai: "",
+    gemini: "",
     runway: "",
     sarvam: "",
     elevenlabs: "",
@@ -12,6 +13,7 @@ export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const [results, setResults] = useState<Record<string, { success: boolean, message: string } | null>>({
     openai: null,
+    gemini: null,
     runway: null,
     sarvam: null,
     elevenlabs: null,
@@ -20,6 +22,7 @@ export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const [loading, setLoading] = useState<Record<string, boolean>>({
     openai: false,
+    gemini: false,
     runway: false,
     sarvam: false,
     elevenlabs: false,
@@ -32,6 +35,7 @@ export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
     // Load keys from localStorage on mount
     const savedKeys = {
       openai: localStorage.getItem("OPENAI_API_KEY") || "",
+      gemini: localStorage.getItem("GEMINI_API_KEY") || "",
       runway: localStorage.getItem("RUNWAYML_API_SECRET") || "",
       sarvam: localStorage.getItem("SARVAM_API_KEY") || "",
       elevenlabs: localStorage.getItem("ELEVENLABS_API_KEY") || "",
@@ -42,6 +46,7 @@ export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const handleSave = () => {
     localStorage.setItem("OPENAI_API_KEY", keys.openai);
+    localStorage.setItem("GEMINI_API_KEY", keys.gemini);
     localStorage.setItem("RUNWAYML_API_SECRET", keys.runway);
     localStorage.setItem("SARVAM_API_KEY", keys.sarvam);
     localStorage.setItem("ELEVENLABS_API_KEY", keys.elevenlabs);
@@ -84,6 +89,7 @@ export default function ApiKeysView({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const providers = [
     { id: "openai", name: "OpenAI", label: "GPT-4o / Sora", placeholder: "sk-..." },
+    { id: "gemini", name: "Google Gemini", label: "Gemini 1.5 Flash / Pro", placeholder: "AIzaSy..." },
     { id: "runway", name: "Runway ML", label: "Gen-3 Alpha / Veo", placeholder: "key_..." },
     { id: "sarvam", name: "Sarvam AI", label: "Indian Voice Models", placeholder: "..." },
     { id: "elevenlabs", name: "ElevenLabs", label: "Global Voice Models", placeholder: "..." },

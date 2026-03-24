@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Globe, Shield, RefreshCw, BarChart3, Clock, Zap, Youtube, Newspaper, Share2, Activity, Loader2 } from "lucide-react";
 import { fetchTrends, fetchLogs, triggerScrape, Trend, ScraperLog } from "../services/scraperService";
 
-export default function ScraperView({ onGenerateFromTrend }: { onGenerateFromTrend: (title: string) => void }) {
+export default function ScraperView({ onGenerateFromTrend, apiBaseUrl }: { onGenerateFromTrend: (title: string) => void, apiBaseUrl: string }) {
   const [trends, setTrends] = useState<Trend[]>([]);
   const [logs, setLogs] = useState<ScraperLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);

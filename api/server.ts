@@ -127,12 +127,41 @@ app.post("/api/generate-openai-video", async (req, res) => {
   }
 });
 
-// OpenAI Prompt Enhancer Endpoint
+// ElevenLabs Video Task Status Endpoint
+app.get("/api/elevenlabs-task/:id", async (req, res) => {
+  const { id } = req.params;
+  if (id.startsWith("mock-") || id.startsWith("el-")) {
+    return res.json({ id, status: "SUCCEEDED", output: ["https://media.elevenlabs.io/mock.mp4"] });
+  }
+  // Real implementation would look like Runway's but for ElevenLabs
+  res.json({ id, status: "PROCESSING" });
+});
+
+// OpenAI Video Task Status Endpoint
+app.get("/api/openai-video-task/:id", async (req, res) => {
+  const { id } = req.params;
+  return res.json({ id, status: "SUCCEEDED", output: ["https://openai.com/mock-sora.mp4"] });
+});
+
+// Prompt Enhancer Endpoint (Supports OpenAI and Gemini)
 app.post("/api/enhance-prompt", async (req, res) => {
   try {
     const { prompt, type = "video", apiKey: clientKey } = req.body;
     const apiKey = clientKey || process.env.OPENAI_API_KEY;
-    if (!apiKey || apiKey === "sk-placeholder") return res.status(400).json({ error: "OpenAI API Key is not configured." });
+    if (!apiKey || apiKey === "sk-placeholder" || apiKey === "openai-placeholder") return res.status(400).json({ error: "API Key is not configured." });
+
+    // Detect if this is a Google/Gemini key
+    if (apiKey.startsWith("AIza")) {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: `You are a professional AI ${type} prompt engineer. Enhance this prompt to be more cinematic and detailed: ${prompt}. Return ONLY the enhanced prompt text.` }] }] })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || "Gemini API Error");
+      const enhancedText = data.candidates?.[0]?.content?.parts?.[0]?.text || prompt;
+      return res.json({ enhancedPrompt: enhancedText });
+    }
 
     const { OpenAI } = await import("openai");
     const openai = new OpenAI({ apiKey });
@@ -143,6 +172,7 @@ app.post("/api/enhance-prompt", async (req, res) => {
     });
     res.json({ enhancedPrompt: response.choices[0].message.content });
   } catch (error: any) {
+    console.error("Enhance Prompt Error:", error);
     if (error.status === 429 || error.message?.includes("quota")) {
       const fbPrompt = req.body.prompt || "your prompt";
       return res.json({ enhancedPrompt: `[MOCK ENHANCED] Cinematic scene for ${String(fbPrompt).substring(0, 50)}...`, isMocked: true });
@@ -192,12 +222,36 @@ app.post("/api/verify-key", async (req, res) => {
 
     if (provider === "openai") {
       try {
+        if (key.startsWith("AIza")) {
+          // If the user pasted a Gemini key in the OpenAI field, redirect verification
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: "Ping" }] }] })
+          });
+          if (response.ok) return res.json({ valid: true, message: "Gemini API Key format detected and verified!" });
+          return res.status(401).json({ valid: false, message: "Invalid Gemini Key format." });
+        }
         const { OpenAI } = await import("openai");
         const openai = new OpenAI({ apiKey: key });
-        await openai.models.list(); // Simple call to verify key
+        await openai.models.list(); 
         return res.json({ valid: true, message: "OpenAI API Key is valid!" });
       } catch (err: any) {
-        return res.status(401).json({ valid: false, message: `Invalid OpenAI Key: ${err.message}` });
+        return res.status(401).json({ valid: false, message: `Invalid Key: ${err.message}` });
+      }
+    }
+
+    if (provider === "gemini") {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: "Ping" }] }] })
+        });
+        if (response.ok) return res.json({ valid: true, message: "Google Gemini API Key is valid!" });
+        return res.status(401).json({ valid: false, message: "Invalid Gemini Key." });
+      } catch (err: any) {
+        return res.status(401).json({ valid: false, message: `Invalid Gemini Key: ${err.message}` });
       }
     }
 
@@ -308,23 +362,48 @@ app.post("/api/generate-image", async (req, res) => {
   }
 });
 
-// Full Production Assets Generation Endpoint
+// Full Production Assets Generation Endpoint (Supports OpenAI and Gemini)
 app.post("/api/generate-production-assets", async (req, res) => {
   try {
     const { topic, platform = "youtube", tone = "engaging", apiKey: clientKey } = req.body;
     const apiKey = clientKey || process.env.OPENAI_API_KEY;
+
+    if (apiKey.startsWith("AIza")) {
+      const assetPrompt = `Generate a JSON object for a ${platform} video about "${topic}" with the following keys: 
+        "script": a high-energy script, 
+        "videoPrompt": a detailed visual description for AI video generation, 
+        "captions": catchy subtitles, 
+        "thumbnailPrompt": a description for a thumbnail image. 
+        Tone: ${tone}. Return ONLY JSON.`;
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: assetPrompt }] }] })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || "Gemini API Error");
+      
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      // Clean possible markdown formatting
+      const cleanedJson = text.replace(/```json|```/g, "").trim();
+      const assets = JSON.parse(cleanedJson);
+      return res.json({ ...assets, topic });
+    }
+
     const { OpenAI } = await import("openai");
     const openai = new OpenAI({ apiKey });
 
     const scriptResponse = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [{ role: "system", content: "Generate JSON with 'script' and 'videoPrompt' keys." }, { role: "user", content: `Topic: ${topic}.` }],
+      messages: [{ role: "system", content: "Generate JSON with 'script', 'videoPrompt', 'captions', and 'thumbnailPrompt' keys." }, { role: "user", content: `Topic: ${topic}.` }],
       response_format: { type: "json_object" }
     });
-    const { script, videoPrompt } = JSON.parse(scriptResponse.choices[0].message.content || "{}");
+    const assets = JSON.parse(scriptResponse.choices[0].message.content || "{}");
     
-    res.json({ script, videoPrompt, topic, captions: "Mock captions", thumbnailPrompt: "Mock thumb prompt" });
+    res.json({ ...assets, topic });
   } catch (error: any) {
+    console.error("Production Assets Error:", error);
     if (error.status === 429 || error.message?.includes("quota")) {
       const fbTopic = req.body.topic || "the topic";
       return res.json({ script: `Mock script for ${fbTopic}`, videoPrompt: "Mock prompt", topic: fbTopic, isMocked: true });

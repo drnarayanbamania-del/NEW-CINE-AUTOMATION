@@ -38,15 +38,14 @@ const API_BASE_URL = "https://new-cine-automation.onrender.com";
 
 // Utility to get stored API keys
 const getStoredKeys = () => {
-  const saved = localStorage.getItem("ai_studio_api_keys");
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch (e) {
-      return {};
-    }
-  }
-  return {};
+  return {
+    openai: localStorage.getItem("OPENAI_API_KEY") || "",
+    gemini: localStorage.getItem("GEMINI_API_KEY") || "",
+    runway: localStorage.getItem("RUNWAYML_API_SECRET") || "",
+    sarvam: localStorage.getItem("SARVAM_API_KEY") || "",
+    elevenlabs: localStorage.getItem("ELEVENLABS_API_KEY") || "",
+    pollinations: localStorage.getItem("POLLINATIONS_API_KEY") || ""
+  };
 };
 
 export default function App() {
@@ -183,7 +182,7 @@ export default function App() {
       const response = await fetch(`${API_BASE_URL}/api/enhance-prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, type: activeTab === "image" ? "image" : "video", apiKey: keys.openai })
+        body: JSON.stringify({ prompt, type: activeTab === "image" ? "image" : "video", apiKey: keys.gemini || keys.openai })
       });
       
       if (!response.ok) throw new Error("Failed to enhance prompt");
@@ -209,7 +208,7 @@ export default function App() {
         body: JSON.stringify({ 
           prompt: `High-quality YouTube thumbnail: ${thumbnailPrompt}`, 
           provider: selectedImageProvider,
-          apiKey: keys.openai,
+          apiKey: keys.gemini || keys.openai,
           pollinationsKey: keys.pollinations
         })
       });
@@ -232,7 +231,7 @@ export default function App() {
       const response = await fetch(`${API_BASE_URL}/api/generate-caption`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: captionPrompt, apiKey: keys.openai })
+        body: JSON.stringify({ prompt: captionPrompt, apiKey: keys.gemini || keys.openai })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to generate captions");
@@ -260,7 +259,7 @@ export default function App() {
       const assetsRes = await fetch(`${API_BASE_URL}/api/generate-production-assets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, apiKey: keys.openai })
+        body: JSON.stringify({ topic, apiKey: keys.gemini || keys.openai })
       });
       const assetsText = await assetsRes.text();
       let assets;
@@ -329,7 +328,7 @@ export default function App() {
               body: JSON.stringify({ 
                 prompt: `High-quality YouTube thumbnail: ${assets.thumbnailPrompt}`, 
                 provider: selectedImageProvider,
-                apiKey: keys.openai,
+                apiKey: keys.gemini || keys.openai,
                 pollinationsKey: keys.pollinations
               })
             });
@@ -447,13 +446,7 @@ export default function App() {
       setStatusMessage("Synthesizing frames...");
       
       // Poll for completion
-      let isDone = false;
-      while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Update status message based on progress or time
-        setStatusMessage("Applying cinematic filters...");
-        
+      const pollTask = async () => {
         const pollRes = await fetch(`${API_BASE_URL}/api/runway-task/${taskId}`);
         const pollContentType = pollRes.headers.get("content-type");
         let pollData;
@@ -471,22 +464,30 @@ export default function App() {
         
         if (pollData.status === "SUCCEEDED") {
           setStatusMessage("Encoding final output...");
-          isDone = true;
           if (pollData.output && pollData.output.length > 0) {
             const url = pollData.output[0];
             setVideoUrl(url);
-            // Add to recent generations
             setRecentGenerations(prev => [
               { id: Date.now(), title: prompt.substring(0, 30) + "...", type: "video", time: "Just now", status: "ready" },
               ...prev.slice(0, 5)
             ]);
+            return true;
           } else {
             throw new Error("No video URL returned from Runway ML.");
           }
         } else if (pollData.status === "FAILED" || pollData.status === "CANCELLED") {
           throw new Error(`Runway ML task ${pollData.status.toLowerCase()}: ${pollData.failure || "Unknown error"}`);
-        } else {
-          setStatusMessage("Still rendering... adding cinematic details...");
+        }
+        return false;
+      };
+
+      // Poll for completion
+      let finished = false;
+      while (!finished) {
+        finished = await pollTask();
+        if (!finished) {
+          setStatusMessage("Processing cinematic details...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       setStatusMessage("");
@@ -524,26 +525,32 @@ export default function App() {
       const taskId = initData.taskId;
       setStatusMessage("Synthesizing frames (ElevenLabs)...");
       
-      // Poll for completion
-      let isDone = false;
-      while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
+      const pollTask = async () => {
         const pollRes = await fetch(`${API_BASE_URL}/api/elevenlabs-task/${taskId}`);
         const pollData = await pollRes.json();
         
         if (pollData.status === "SUCCEEDED") {
           const url = pollData.output[0];
           setVideoUrl(url);
-          // Add to recent generations
           setRecentGenerations(prev => [
             { id: Date.now(), title: prompt.substring(0, 30) + "...", type: "video", time: "Just now", status: "ready" },
             ...prev.slice(0, 5)
           ]);
           setStatusMessage("");
-          isDone = true;
+          return true;
         } else if (pollData.status === "FAILED") {
           throw new Error("ElevenLabs generation failed.");
+        }
+        return false;
+      };
+
+      // Poll for completion
+      let finished = false;
+      while (!finished) {
+        finished = await pollTask();
+        if (!finished) {
+          setStatusMessage("Processing ElevenLabs frames...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     } catch (err: any) {
@@ -567,7 +574,7 @@ export default function App() {
       const initRes = await fetch(`${API_BASE_URL}/api/generate-openai-video`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, apiKey: keys.openai })
+        body: JSON.stringify({ prompt: finalPrompt, aspectRatio, resolution, apiKey: keys.openai || keys.gemini })
       });
       
       const initData = await initRes.json();
@@ -579,26 +586,32 @@ export default function App() {
       const taskId = initData.taskId;
       setStatusMessage("Synthesizing frames (OpenAI Sora)...");
       
-      // Poll for completion
-      let isDone = false;
-      while (!isDone) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
+      const pollTask = async () => {
         const pollRes = await fetch(`${API_BASE_URL}/api/openai-video-task/${taskId}`);
         const pollData = await pollRes.json();
         
         if (pollData.status === "SUCCEEDED") {
           const url = pollData.output[0];
           setVideoUrl(url);
-          // Add to recent generations
           setRecentGenerations(prev => [
             { id: Date.now(), title: prompt.substring(0, 30) + "...", type: "video", time: "Just now", status: "ready" },
             ...prev.slice(0, 5)
           ]);
           setStatusMessage("");
-          isDone = true;
+          return true;
         } else if (pollData.status === "FAILED") {
           throw new Error("OpenAI video generation failed.");
+        }
+        return false;
+      };
+
+      // Poll for completion
+      let finished = false;
+      while (!finished) {
+        finished = await pollTask();
+        if (!finished) {
+          setStatusMessage("Processing Sora frames...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     } catch (err: any) {
@@ -648,7 +661,7 @@ export default function App() {
         body: JSON.stringify({ 
           prompt, 
           provider: selectedImageProvider,
-          apiKey: keys.openai,
+          apiKey: keys.gemini || keys.openai,
           pollinationsKey: keys.pollinations
         })
       });
