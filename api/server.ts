@@ -186,6 +186,7 @@ app.post("/api/generate-tts", async (req, res) => {
   try {
     const { text, languageCode = "hi-IN", speaker = "meera", apiKey: clientKey } = req.body;
     const apiKey = clientKey || process.env.SARVAM_API_KEY;
+    if (apiKey?.startsWith("AIza")) return res.status(400).json({ error: "Google Gemini key provided for Sarvam AI. Please use a valid Sarvam AI subscription key." });
     if (!apiKey || apiKey === "sarvam-placeholder") return res.status(400).json({ error: "Sarvam AI API Key is not configured." });
 
     const response = await fetch("https://api.sarvam.ai/text-to-speech", {
@@ -346,6 +347,14 @@ app.post("/api/generate-image", async (req, res) => {
     }
 
     const apiKey = clientKey || process.env.OPENAI_API_KEY;
+    if (apiKey?.startsWith("AIza")) {
+      // Automatic fallback to Pollinations for Gemini keys during image generation
+      const encodedPrompt = encodeURIComponent(imagePrompt || "cinematic scene");
+      const seed = Math.floor(Math.random() * 1000000);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&width=1024&height=1024&nologo=true&enhance=true`;
+      return res.json({ imageUrl, provider: "pollinations-gemini-fallback" });
+    }
+
     const { OpenAI } = await import("openai");
     const openai = new OpenAI({ apiKey });
     const response = await openai.images.generate({ model: "dall-e-3", prompt: imagePrompt, n: 1, size: "1024x1024" });
